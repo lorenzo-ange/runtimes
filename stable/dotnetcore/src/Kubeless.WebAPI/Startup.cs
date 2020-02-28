@@ -27,7 +27,7 @@ namespace Kubeless.WebAPI
             var function = FunctionFactory.GetFunction(Configuration);
             var timeout = FunctionFactory.GetFunctionTimeout(Configuration);
 
-            services.AddSingleton<IInvoker>(new CompiledFunctionInvoker(function, timeout));
+            services.AddTransient<IInvoker>(_ => new CompiledFunctionInvoker(function, timeout));
             services.AddSingleton<IParameterHandler>(new DefaultParameterHandler(Configuration));
         }
 
@@ -38,11 +38,7 @@ namespace Kubeless.WebAPI
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
-
             app.UseRouting();
-
-            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
                 endpoints.MapControllers());
