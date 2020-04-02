@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Kubeless.Core\Kubeless.Core.csproj" />
+    <PackageReference Include="DogStatsD-CSharp-Client" Version="4.0.1" />
     <PackageReference Include="prometheus-net.AspNetCore" Version="3.4.0" />
   </ItemGroup>
 

@@ -1,3 +1,4 @@
+using System;
 using Kubeless.Core.Handlers;
 using Kubeless.Core.Interfaces;
 using Kubeless.Core.Invokers;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Prometheus;
+using StatsdClient;
 
 namespace Kubeless.WebAPI
 {
@@ -29,6 +31,11 @@ namespace Kubeless.WebAPI
 
             services.AddTransient<IInvoker>(_ => new CompiledFunctionInvoker(function, timeout, FunctionFactory.GetFunctionPublishPath()));
             services.AddSingleton<IParameterHandler>(new DefaultParameterHandler(Configuration));
+
+            if (!String.IsNullOrEmpty(Environment.GetEnvironmentVariable("DD_AGENT_HOST")))
+            {
+                DogStatsd.Configure(new StatsdConfig());
+            }
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
