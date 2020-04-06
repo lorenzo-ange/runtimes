@@ -17,6 +17,7 @@ namespace Kubeless.WebAPI
             return Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
+                    webBuilder.UseSentry();
                     webBuilder.UseStartup<Startup>().UseUrls($"http://*:{port}");
                 });
         }
