@@ -62,6 +62,6 @@
       }],
     },
   ],
-  depName: "project.csproj",
+  depName: "",
   fileNameSuffix: ".cs"
 }
