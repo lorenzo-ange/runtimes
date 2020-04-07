@@ -41,7 +41,7 @@ namespace Kubeless.Core.Handlers
             using var sr = new StreamReader(request.Body);
             object data = await sr.ReadToEndAsync();
 
-            if (contentType.Contains("application/json") && data.ToString().Length > 0) {
+            if (contentType.Any(ct => ct.Contains("application/json")) && data.ToString().Length > 0) {
                 data = JsonSerializer.Deserialize<dynamic>(data.ToString());
             }
 
