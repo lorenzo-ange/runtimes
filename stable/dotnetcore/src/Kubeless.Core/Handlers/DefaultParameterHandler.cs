@@ -3,6 +3,7 @@ using Kubeless.Functions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -40,7 +41,7 @@ namespace Kubeless.Core.Handlers
             using var sr = new StreamReader(request.Body);
             object data = await sr.ReadToEndAsync();
 
-            if (contentType == "application/json" && data.ToString().Length > 0) {
+            if (contentType.Contains("application/json") && data.ToString().Length > 0) {
                 data = JsonSerializer.Deserialize<dynamic>(data.ToString());
             }
 
