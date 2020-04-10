@@ -6,6 +6,7 @@ WORKDIR /app
 COPY ./src/Kubeless.Core/*.csproj ./Kubeless.Core/
 COPY ./src/Kubeless.Functions/*.csproj ./Kubeless.Functions/
 COPY ./src/Kubeless.WebAPI/*.csproj ./Kubeless.WebAPI/
+COPY ./src/Kubeless.WebAPI/nuget.config ./Kubeless.WebAPI/nuget.config
 RUN dotnet restore ./Kubeless.WebAPI/
 
 # Copy everything else and build in release mode
