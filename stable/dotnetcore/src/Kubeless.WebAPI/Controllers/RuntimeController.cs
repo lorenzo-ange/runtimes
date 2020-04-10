@@ -53,6 +53,13 @@ namespace Kubeless.WebAPI.Controllers
                 LogMetrics(context, 408);
                 return new StatusCodeResult(408);
             }
+            catch (PhotosiMessaging.Exceptions.BaseException exception)
+            {
+                _logger.LogCritical(exception, "{0}: PhotosiMessaging Exception. HTTP Response: {1}. Reason: {2}.", DateTime.Now.ToString(), 550, exception.Message);
+                LogMetrics(context, 550);
+                Response.StatusCode = 550;
+                return exception.PmsResponse;
+            }
             catch (Exception exception)
             {
                 _logger.LogCritical(exception, "{0}: Function Corrupted. HTTP Response: {1}. Reason: {2}.", DateTime.Now.ToString(), 500, exception.Message);
