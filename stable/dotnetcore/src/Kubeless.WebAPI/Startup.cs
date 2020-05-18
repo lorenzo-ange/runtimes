@@ -1,3 +1,4 @@
+using Datadog.Trace.OpenTracing;
 using Kubeless.Core.Handlers;
 using Kubeless.Core.Interfaces;
 using Kubeless.Core.Invokers;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using OpenTracing.Util;
 using Prometheus;
 
 namespace Kubeless.WebAPI
@@ -26,6 +28,10 @@ namespace Kubeless.WebAPI
 
             var function = FunctionFactory.GetFunction(Configuration);
             var timeout = FunctionFactory.GetFunctionTimeout(Configuration);
+
+            OpenTracing.ITracer tracer = OpenTracingTracerFactory.CreateTracer();
+            GlobalTracer.Register(tracer);
+            services.AddOpenTracing();
 
             services.AddTransient<IInvoker>(_ => new CompiledFunctionInvoker(function, timeout));
             services.AddSingleton<IParameterHandler>(new DefaultParameterHandler(Configuration));

@@ -5,6 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="OpenTracing" Version="0.12.1" />
+    <PackageReference Include="Datadog.Trace.OpenTracing" Version="1.17.0" />
+    <PackageReference Include="OpenTracing.Contrib.NetCore" Version="0.6.2" />
     <PackageReference Include="Sentry.AspNetCore" Version="2.1.1" />
     <ProjectReference Include="..\Kubeless.Core\Kubeless.Core.csproj" />
     <PackageReference Include="PhotosiMessaging.Exceptions" Version="0.0.2" />
