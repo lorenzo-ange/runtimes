@@ -10,7 +10,7 @@
     <PackageReference Include="OpenTracing.Contrib.NetCore" Version="0.6.2" />
     <PackageReference Include="Sentry.AspNetCore" Version="2.1.1" />
     <ProjectReference Include="..\Kubeless.Core\Kubeless.Core.csproj" />
-    <PackageReference Include="PhotosiMessaging.Exceptions" Version="0.0.2" />
+    <PackageReference Include="PhotosiMessaging.Exceptions" Version="0.0.3" />
     <PackageReference Include="prometheus-net.AspNetCore" Version="3.4.0" />
   </ItemGroup>
 
