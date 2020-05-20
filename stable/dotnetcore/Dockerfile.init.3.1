@@ -9,3 +9,7 @@ RUN chown 1000 /.dotnet /.nuget /.nuget/packages /.local
 ADD compile-function.sh .
 RUN chmod u+x compile-function.sh
 RUN chown 1000 compile-function.sh
+
+RUN adduser slsuser --uid 1000
+RUN su slsuser -c "dotnet tool install -g dotnet-ef --version 3.1.1"
+ENV PATH "$PATH:/home/slsuser/.dotnet/tools"
