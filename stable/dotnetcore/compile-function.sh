@@ -17,11 +17,16 @@ cd $PROJECT_MOUNT
 if [ -d "Migrations" ] 
 then
     echo "DB migrations execution started"
+    echo "CONNECTION_STRING='$CONNECTION_STRING'"
     dotnet tool install --global dotnet-ef
     export PATH="$PATH:/root/.dotnet/tools"
     dotnet add package Microsoft.EntityFrameworkCore.Design -v 3.1.2
-    # dotnet ef database update
-    echo "DB migrations execution ended"
+    if ! dotnet ef database update; then
+        echo "DB migration failed"
+        exit 1
+    else
+        echo "DB migrations execution ended"
+    fi
 else
     echo "No DB migrations found"
 fi
