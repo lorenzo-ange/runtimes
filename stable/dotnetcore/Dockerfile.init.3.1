@@ -11,5 +11,6 @@ RUN chmod u+x compile-function.sh
 RUN chown 1000 compile-function.sh
 
 RUN adduser slsuser --uid 1000
-RUN su slsuser -c "dotnet tool install -g dotnet-ef --version 3.1.1"
+ENV EF_CORE_VERSION 3.1.4
+RUN su slsuser -c "dotnet tool install -g dotnet-ef --version $EF_CORE_VERSION"
 ENV PATH "$PATH:/home/slsuser/.dotnet/tools"

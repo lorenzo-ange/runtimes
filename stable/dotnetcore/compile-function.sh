@@ -18,7 +18,7 @@ if [ -d "Migrations" ]
 then
     echo "DB migrations execution started"
     echo "CONNECTION_STRING='$CONNECTION_STRING'"
-    dotnet add package Microsoft.EntityFrameworkCore.Design -v 3.1.1
+    dotnet add package Microsoft.EntityFrameworkCore.Design -v $EF_CORE_VERSION
     if ! dotnet ef database update; then
         echo "DB migration failed"
         exit 1
