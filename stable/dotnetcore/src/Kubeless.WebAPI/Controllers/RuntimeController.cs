@@ -17,10 +17,18 @@ namespace Kubeless.WebAPI.Controllers
         private readonly IParameterHandler _parameterHandler;
 
         private static readonly Counter CallsCountTotal = Metrics
-            .CreateCounter("kubeless_calls_total", "Number of calls processed.", new CounterConfiguration
-            {
-                LabelNames = new[] {"status", "handler", "function", "runtime"}
-            });
+            .CreateCounter("kubeless_calls_total", "Number of calls processed.",
+                new CounterConfiguration
+                {
+                    LabelNames = new[] {"status", "handler", "function", "runtime"}
+                });
+
+        private static readonly Histogram DurationSeconds = Metrics
+            .CreateHistogram("kubeless_function_duration_seconds", "Duration of user function in seconds",
+                new HistogramConfiguration
+                {
+                    LabelNames = new[] {"handler", "function", "runtime"}
+                });
 
         public RuntimeController(ILogger<RuntimeController> logger, IInvoker invoker, IParameterHandler parameterHandler)
         {
@@ -40,7 +48,10 @@ namespace Kubeless.WebAPI.Controllers
             {
                 (@event, context) = await _parameterHandler.GetFunctionParameters(Request);
 
-                var output = await _invoker.Execute(@event, context);
+                object output;
+                using (DurationSeconds.WithLabels(context.ModuleName, context.FunctionName, context.Runtime).NewTimer()) {
+                    output = await _invoker.Execute(@event, context);
+                }
 
                 _logger.LogInformation("{0}: Function Executed. HTTP response: {1}.", DateTime.Now.ToString(), 200);
 
