@@ -106,7 +106,7 @@ namespace Kubeless.WebAPI.Controllers
 
                 using var bodySr = new StreamReader(Request.Body, leaveOpen: true);
                 var body = await bodySr.ReadToEndAsync();
-                scope.SetExtra("message_body", body);
+                scope.SetExtra("request_body", body);
 
                 Request.Body.Position = 0;
             });
