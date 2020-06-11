@@ -10,6 +10,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTracing.Util;
 using Prometheus;
+using OpenTracing.Contrib.NetCore.Configuration;
+using System.Collections.Generic;
 
 namespace Kubeless.WebAPI
 {
@@ -32,6 +34,14 @@ namespace Kubeless.WebAPI
             OpenTracing.ITracer tracer = OpenTracingTracerFactory.CreateTracer();
             GlobalTracer.Register(tracer);
             services.AddOpenTracing();
+            services.Configure<AspNetCoreDiagnosticOptions>(options =>
+            {
+                options.Hosting.IgnorePatterns.Add(x =>
+                {
+                    var ignoredPaths = new List<string> {"/healthz", "/metrics"};
+                    return ignoredPaths.Contains(x.Request.Path);
+                });
+            });
 
             services.AddTransient<IInvoker>(_ => new CompiledFunctionInvoker(function, timeout));
             services.AddSingleton<IParameterHandler>(new DefaultParameterHandler(Configuration));
