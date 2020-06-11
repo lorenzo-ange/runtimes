@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Kubeless.Functions;
 using Prometheus;
+using OpenTracing.Util;
+using Sentry;
+using System.IO;
+using Microsoft.AspNetCore.Http;
 
 namespace Kubeless.WebAPI.Controllers
 {
@@ -41,6 +45,8 @@ namespace Kubeless.WebAPI.Controllers
         public async Task<object> Execute()
         {
             _logger.LogInformation("{0}: Function Started. HTTP Method: {1}, Path: {2}.", DateTime.Now.ToString(), Request.Method, Request.Path);
+            AddContextToSentry();
+            AddContextToTraceSpan();
 
             Event @event = null;
             Context context = null;
@@ -90,6 +96,29 @@ namespace Kubeless.WebAPI.Controllers
                     .WithLabels($"{statusCode}", context.ModuleName, context.FunctionName, context.Runtime)
                     .Inc();
             }
+        }
+
+        private void AddContextToSentry()
+        {
+            SentrySdk.ConfigureScope(async scope => 
+            {
+                Request.EnableBuffering();
+
+                using var bodySr = new StreamReader(Request.Body, leaveOpen: true);
+                var body = await bodySr.ReadToEndAsync();
+                scope.SetExtra("message_body", body);
+
+                Request.Body.Position = 0;
+            });
+        }
+
+        private void AddContextToTraceSpan()
+        {
+            var activeSpan = GlobalTracer.Instance.ActiveSpan;
+            activeSpan.SetTag("func_handler", Environment.GetEnvironmentVariable("FUNC_HANDLER"));
+            activeSpan.SetTag("func_runtime", Environment.GetEnvironmentVariable("FUNC_RUNTIME"));
+            activeSpan.SetTag("service_name", Environment.GetEnvironmentVariable("SERVICE_NAME"));
+            activeSpan.SetTag("hostname", Environment.GetEnvironmentVariable("HOSTNAME"));
         }
     }
 }
