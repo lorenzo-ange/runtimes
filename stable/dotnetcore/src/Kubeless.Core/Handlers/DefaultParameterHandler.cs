@@ -38,11 +38,12 @@ namespace Kubeless.Core.Handlers
                 request.Body.Position = 0;
             }
 
-            using var sr = new StreamReader(request.Body);
-            object data = await sr.ReadToEndAsync();
-
-            if (contentType.Any(ct => ct.Contains("application/json")) && data.ToString().Length > 0) {
-                data = JsonSerializer.Deserialize<dynamic>(data.ToString());
+            object data;
+            if (contentType.Any(ct => ct.Contains("application/json")) && request.ContentLength > 0) {
+                data = await JsonSerializer.DeserializeAsync<dynamic>(request.Body);
+            } else {
+                using var sr = new StreamReader(request.Body, leaveOpen: true);
+                data = await sr.ReadToEndAsync();
             }
 
             var extensions = new Extensions(request);
