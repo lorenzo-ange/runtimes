@@ -12,6 +12,7 @@ using OpenTracing.Util;
 using Prometheus;
 using OpenTracing.Contrib.NetCore.Configuration;
 using System.Collections.Generic;
+using System;
 
 namespace Kubeless.WebAPI
 {
@@ -31,17 +32,10 @@ namespace Kubeless.WebAPI
             var function = FunctionFactory.GetFunction(Configuration);
             var timeout = FunctionFactory.GetFunctionTimeout(Configuration);
 
-            OpenTracing.ITracer tracer = OpenTracingTracerFactory.CreateTracer();
-            GlobalTracer.Register(tracer);
-            services.AddOpenTracing();
-            services.Configure<AspNetCoreDiagnosticOptions>(options =>
-            {
-                options.Hosting.IgnorePatterns.Add(x =>
-                {
-                    var ignoredPaths = new List<string> {"/healthz", "/metrics"};
-                    return ignoredPaths.Contains(x.Request.Path);
-                });
-            });
+            var tracingEnabled = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DD_AGENT_HOST"));
+            if (tracingEnabled) {
+                ConfigureTracing(services);
+            }
 
             services.AddTransient<IInvoker>(_ => new CompiledFunctionInvoker(function, timeout));
             services.AddSingleton<IParameterHandler>(new DefaultParameterHandler(Configuration));
@@ -66,6 +60,28 @@ namespace Kubeless.WebAPI
                     .AllowAnyMethod());
             
             app.UseMetricServer();
+        }
+
+        private void ConfigureTracing(IServiceCollection services)
+        {
+            OpenTracing.ITracer tracer = OpenTracingTracerFactory.CreateTracer();
+            GlobalTracer.Register(tracer);
+
+            services.AddOpenTracingCoreServices(otBuilder =>
+            {
+                otBuilder.AddAspNetCore()
+                    .AddCoreFx()
+                    .AddLoggerProvider();
+            });
+
+            services.Configure<AspNetCoreDiagnosticOptions>(options =>
+            {
+                options.Hosting.IgnorePatterns.Add(x =>
+                {
+                    var ignoredPaths = new List<string> {"/healthz", "/metrics"};
+                    return ignoredPaths.Contains(x.Request.Path);
+                });
+            });
         }
     }
 }

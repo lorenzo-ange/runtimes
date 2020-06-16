@@ -1,3 +1,4 @@
+using System;
 using Kubeless.WebAPI.Utils;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
@@ -18,10 +19,13 @@ namespace Kubeless.WebAPI
             return Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseSentry(options => {
-                        options.Debug = true;
-                        options.MaxRequestBodySize = RequestSize.Always;
-                    });
+                    var sentryEnabled = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SENTRY_DSN"));
+                    if (sentryEnabled) {
+                        webBuilder.UseSentry(options => {
+                            options.Debug = true;
+                            options.MaxRequestBodySize = RequestSize.Always;
+                        });
+                    }
                     webBuilder.UseStartup<Startup>().UseUrls($"http://*:{port}");
                 });
         }
