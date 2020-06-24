@@ -13,6 +13,8 @@ using Prometheus;
 using OpenTracing.Contrib.NetCore.Configuration;
 using System.Collections.Generic;
 using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Kubeless.WebAPI
 {
@@ -27,7 +29,11 @@ namespace Kubeless.WebAPI
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers();
+            services.AddControllers().AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
 
             var function = FunctionFactory.GetFunction(Configuration);
             var timeout = FunctionFactory.GetFunctionTimeout(Configuration);
