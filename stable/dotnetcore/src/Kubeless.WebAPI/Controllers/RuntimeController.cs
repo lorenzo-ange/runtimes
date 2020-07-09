@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Kubeless.Core.Interfaces;
+using Kubeless.DisposableExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Kubeless.Functions;
@@ -55,6 +56,7 @@ namespace Kubeless.WebAPI.Controllers
                 using (durationMetrics.NewTimer()) {
                     output = await _invoker.Execute(@event, context);
                 }
+                await @event.Extensions.DisposeAllAsync();
 
                 _logger.LogInformation($"{DateTime.Now}: Function Executed. HTTP response: 200.");
 
