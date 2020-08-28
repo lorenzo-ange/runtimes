@@ -5,6 +5,7 @@ using Kubeless.DisposableExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Kubeless.Functions;
+using Kubeless.WebAPI.BackgroundServices;
 using Prometheus;
 using OpenTracing.Util;
 
@@ -44,6 +45,13 @@ namespace Kubeless.WebAPI.Controllers
         {
             _logger.LogInformation($"{DateTime.Now}: Function Started. HTTP Method: {Request.Method}, Path: {Request.Path}.");
             AddContextDataToTraceSpan();
+
+            if (await BackgroundWorkersService.QueueIfParallelConstraint(Request, _invoker.MethodInfo))
+            {
+                var activeSpan = GlobalTracer.Instance.ActiveSpan;
+                activeSpan?.SetTag("queued", "true");
+                return true;
+            }
 
             Event @event = null;
             Context context = null;
