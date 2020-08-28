@@ -5,11 +5,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BeetleX.Redis;
+using Kubeless.Core.Interfaces;
 using Kubeless.WebAPI.Utils;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
@@ -27,6 +27,7 @@ namespace Kubeless.WebAPI.BackgroundServices
         private static readonly string ModuleName = Environment.GetEnvironmentVariable("MOD_NAME");
         private static readonly string FunctionHandler = Environment.GetEnvironmentVariable("FUNC_HANDLER");
         private static readonly string JobQueueName = $"JobQueue-{ModuleName}-{FunctionHandler}";
+
         private const string BypassQueueHeader = "x-bypass-queue";
 
         private static readonly HttpClient HttpClient = new HttpClient(
@@ -35,15 +36,18 @@ namespace Kubeless.WebAPI.BackgroundServices
             }
         );
         
-        private static int _workersNumber = -1;
-
+        private readonly int _functionParallelismConstraint = 0;
         private readonly ILogger<BackgroundWorkersService> _logger;
         private readonly Dictionary<string, int> _workersRestarts = new Dictionary<string, int>();
         private const int MaxWorkerRestarts = 10;
 
-        public BackgroundWorkersService(ILogger<BackgroundWorkersService> logger)
+        public BackgroundWorkersService(ILogger<BackgroundWorkersService> logger, IInvoker invoker)
         {
             _logger = logger;
+
+            var attrs = invoker.MethodInfo.GetCustomAttributes(false);
+            var parallelismConstraint = (ParallelismConstraint) attrs.FirstOrDefault(a => a is ParallelismConstraint);
+            _functionParallelismConstraint = parallelismConstraint?.Parallelism ?? 0;
         }
 
         private static RedisDB GetRedisDb()
@@ -111,32 +115,19 @@ namespace Kubeless.WebAPI.BackgroundServices
             }
         }
 
-        private async Task WaitForWorkersNumber(CancellationToken stoppingToken, int pollingIntervalMs = 1000)
-        {
-            // wait until workers number will be set by a call to the QueueIfParallelConstraint method
-
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                if (_workersNumber != -1)
-                {
-                    return;
-                }
-                await Task.Delay(pollingIntervalMs, stoppingToken);
-            }
-
-            throw new Exception("Cancellation requested");
-        }
-
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             try
             {
-                _logger.LogInformation("BackgroundWorkersService started, waiting for workers number");
-                await WaitForWorkersNumber(stoppingToken);
+                if (_functionParallelismConstraint == 0)
+                {
+                    _logger.LogInformation("BackgroundWorkersService no workers to start, shutting down");
+                    return;
+                }
 
                 _logger.LogInformation("BackgroundWorkersService starting workers");
                 var workers = new List<Task>();
-                for (var i = 0; i < _workersNumber; i++)
+                for (var i = 0; i < _functionParallelismConstraint; i++)
                 {
                     var workerId = $"{i}";
                     _workersRestarts[workerId] = 0;
@@ -151,26 +142,18 @@ namespace Kubeless.WebAPI.BackgroundServices
             }
         }
 
-        public static async Task<bool> EnqueueIfParallelConstraint(HttpRequest request, MethodInfo methodInfo)
+        public async Task<bool> EnqueueIfParallelConstraint(HttpRequest request)
         {
+            if (_functionParallelismConstraint == 0)
+            {
+                // this function has no constraints on its parallelism
+                return false;
+            }
+
             if (request.Headers[BypassQueueHeader].Any())
             {
                 // this is a call from a background worker
                 return false;
-            }
-
-            var attrs = methodInfo.GetCustomAttributes(false);
-            var parallelismConstraint = (ParallelismConstraint) attrs.FirstOrDefault(a => a is ParallelismConstraint);
-            if (parallelismConstraint == null)
-            {
-                // this function does not have ParallelismConstraint annotation
-                return false;
-            }
-
-            // set workersNumber if not already set
-            if (_workersNumber == -1)
-            {
-                _workersNumber = parallelismConstraint.Parallelism;
             }
 
             // push data to redis
