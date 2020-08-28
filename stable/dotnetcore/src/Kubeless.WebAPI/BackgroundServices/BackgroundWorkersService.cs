@@ -149,7 +149,7 @@ namespace Kubeless.WebAPI.BackgroundServices
             }
         }
 
-        public static async Task<bool> QueueIfParallelConstraint(HttpRequest request, MethodInfo methodInfo)
+        public static async Task<bool> EnqueueIfParallelConstraint(HttpRequest request, MethodInfo methodInfo)
         {
             if (request.Headers[BypassQueueHeader].Any())
             {

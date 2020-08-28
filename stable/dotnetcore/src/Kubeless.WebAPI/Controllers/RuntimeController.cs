@@ -46,10 +46,9 @@ namespace Kubeless.WebAPI.Controllers
             _logger.LogInformation($"{DateTime.Now}: Function Started. HTTP Method: {Request.Method}, Path: {Request.Path}.");
             AddContextDataToTraceSpan();
 
-            if (await BackgroundWorkersService.QueueIfParallelConstraint(Request, _invoker.MethodInfo))
+            if (await BackgroundWorkersService.EnqueueIfParallelConstraint(Request, _invoker.MethodInfo))
             {
-                var activeSpan = GlobalTracer.Instance.ActiveSpan;
-                activeSpan?.SetTag("queued", "true");
+                GlobalTracer.Instance.ActiveSpan?.SetTag("enqueued", "true");
                 return true;
             }
 
