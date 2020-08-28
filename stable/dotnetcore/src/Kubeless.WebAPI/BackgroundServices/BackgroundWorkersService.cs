@@ -24,7 +24,9 @@ namespace Kubeless.WebAPI.BackgroundServices
         private static readonly string FunctionUrl = $"http://localhost:{FunctionPort}";
 
         private static readonly string RedisHost = Environment.GetEnvironmentVariable("BACKGROUND_WORKERS_REDIS_HOST");
-        private const string JobQueueName = "jobQueue";
+        private static readonly string ModuleName = Environment.GetEnvironmentVariable("MOD_NAME");
+        private static readonly string FunctionHandler = Environment.GetEnvironmentVariable("FUNC_HANDLER");
+        private static readonly string JobQueueName = $"JobQueue-{ModuleName}-{FunctionHandler}";
         private const string BypassQueueHeader = "x-bypass-queue";
 
         private static readonly HttpClient HttpClient = new HttpClient(
