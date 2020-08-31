@@ -26,10 +26,9 @@ namespace Kubeless.WebAPI.BackgroundServices
             }
         );
 
-        private readonly int _functionParallelismConstraint;
-        private readonly string _functionUrl;
-        private readonly string _redisHost;
-        private readonly string _jobQueueName;
+        private static int _functionParallelismConstraint = 0;
+        private static string _functionUrl;
+        private static string _jobQueueName;
         private readonly ILogger<BackgroundWorkersService> _logger;
 
         private readonly Dictionary<string, int> _workersRestarts = new Dictionary<string, int>();
@@ -49,19 +48,18 @@ namespace Kubeless.WebAPI.BackgroundServices
             _functionUrl = $"http://localhost:{functionPort}";
 
             _jobQueueName = $"JobQueue-{invoker.Function.ModuleName}-{invoker.Function.FunctionHandler}";
-
-            _redisHost = Environment.GetEnvironmentVariable("BACKGROUND_WORKERS_REDIS_HOST");
         }
 
-        private RedisDB GetRedisDb()
+        private static RedisDB GetRedisDb()
         {
-            if (string.IsNullOrEmpty(_redisHost))
+            var redisHost = Environment.GetEnvironmentVariable("BACKGROUND_WORKERS_REDIS_HOST");
+            if (string.IsNullOrEmpty(redisHost))
             {
                 throw new Exception("Trying to use BackgroundWorkers without BACKGROUND_WORKERS_REDIS_HOST env var");
             }
             var db = new RedisDB();
-            db.Host.AddReadHost(_redisHost);
-            db.Host.AddWriteHost(_redisHost);
+            db.Host.AddReadHost(redisHost);
+            db.Host.AddWriteHost(redisHost);
             return db;
         }
 
@@ -145,7 +143,7 @@ namespace Kubeless.WebAPI.BackgroundServices
             }
         }
 
-        public async Task<bool> EnqueueIfParallelConstraint(HttpRequest request)
+        public static async Task<bool> EnqueueIfParallelConstraint(HttpRequest request)
         {
             if (_functionParallelismConstraint <= 0)
             {

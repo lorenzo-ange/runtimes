@@ -18,7 +18,6 @@ namespace Kubeless.WebAPI.Controllers
         private readonly ILogger<RuntimeController> _logger;
         private readonly IInvoker _invoker;
         private readonly IParameterHandler _parameterHandler;
-        private readonly BackgroundWorkersService _backgroundWorkers;
 
         private static readonly Counter CallsCountTotal = Metrics
             .CreateCounter("kubeless_calls_total", "Number of calls processed.",
@@ -34,12 +33,11 @@ namespace Kubeless.WebAPI.Controllers
                     LabelNames = new[] {"handler", "function", "runtime"}
                 });
 
-        public RuntimeController(ILogger<RuntimeController> logger, IInvoker invoker, IParameterHandler parameterHandler, BackgroundWorkersService backgroundWorkers)
+        public RuntimeController(ILogger<RuntimeController> logger, IInvoker invoker, IParameterHandler parameterHandler)
         {
             _logger = logger;
             _invoker = invoker;
             _parameterHandler = parameterHandler;
-            _backgroundWorkers = backgroundWorkers;
         }
 
         [AcceptVerbs("GET", "POST", "PUT", "PATCH", "DELETE")]
@@ -48,7 +46,7 @@ namespace Kubeless.WebAPI.Controllers
             _logger.LogInformation($"{DateTime.Now}: Function Started. HTTP Method: {Request.Method}, Path: {Request.Path}.");
             AddContextDataToTraceSpan();
 
-            if (await _backgroundWorkers.EnqueueIfParallelConstraint(Request))
+            if (await BackgroundWorkersService.EnqueueIfParallelConstraint(Request))
             {
                 GlobalTracer.Instance.ActiveSpan?.SetTag("enqueued", "true");
                 return true;
