@@ -20,45 +20,48 @@ namespace Kubeless.WebAPI.BackgroundServices
 {
     public class BackgroundWorkersService : BackgroundService
     {
-        private static readonly string FunctionPort = VariablesUtils.GetEnvVar("FUNC_PORT", "8080");
-        private static readonly string FunctionUrl = $"http://localhost:{FunctionPort}";
-
-        private static readonly string RedisHost = Environment.GetEnvironmentVariable("BACKGROUND_WORKERS_REDIS_HOST");
-        private static readonly string ModuleName = Environment.GetEnvironmentVariable("MOD_NAME");
-        private static readonly string FunctionHandler = Environment.GetEnvironmentVariable("FUNC_HANDLER");
-        private static readonly string JobQueueName = $"JobQueue-{ModuleName}-{FunctionHandler}";
-
-        private const string BypassQueueHeader = "x-bypass-queue";
-
         private static readonly HttpClient HttpClient = new HttpClient(
             new SocketsHttpHandler {
                 PooledConnectionLifetime = new TimeSpan(0, 0, 2),
             }
         );
-        
-        private readonly int _functionParallelismConstraint = 0;
+
+        private readonly int _functionParallelismConstraint;
+        private readonly string _functionUrl;
+        private readonly string _redisHost;
+        private readonly string _jobQueueName;
         private readonly ILogger<BackgroundWorkersService> _logger;
+
         private readonly Dictionary<string, int> _workersRestarts = new Dictionary<string, int>();
         private const int MaxWorkerRestarts = 10;
+
+        private const string WorkerCallHeader = "x-worker-call";
 
         public BackgroundWorkersService(ILogger<BackgroundWorkersService> logger, IInvoker invoker)
         {
             _logger = logger;
 
-            var attrs = invoker.MethodInfo.GetCustomAttributes(false);
-            var parallelismConstraint = (ParallelismConstraint) attrs.FirstOrDefault(a => a is ParallelismConstraint);
+            var functionAttrs = invoker.MethodInfo.GetCustomAttributes(false);
+            var parallelismConstraint = (ParallelismConstraint) functionAttrs.FirstOrDefault(a => a is ParallelismConstraint);
             _functionParallelismConstraint = parallelismConstraint?.Parallelism ?? 0;
+
+            var functionPort = VariablesUtils.GetEnvVar("FUNC_PORT", "8080");
+            _functionUrl = $"http://localhost:{functionPort}";
+
+            _jobQueueName = $"JobQueue-{invoker.Function.ModuleName}-{invoker.Function.FunctionHandler}";
+
+            _redisHost = Environment.GetEnvironmentVariable("BACKGROUND_WORKERS_REDIS_HOST");
         }
 
-        private static RedisDB GetRedisDb()
+        private RedisDB GetRedisDb()
         {
-            if (string.IsNullOrEmpty(RedisHost))
+            if (string.IsNullOrEmpty(_redisHost))
             {
                 throw new Exception("Trying to use BackgroundWorkers without BACKGROUND_WORKERS_REDIS_HOST env var");
             }
             var db = new RedisDB();
-            db.Host.AddReadHost(RedisHost);
-            db.Host.AddWriteHost(RedisHost);
+            db.Host.AddReadHost(_redisHost);
+            db.Host.AddWriteHost(_redisHost);
             return db;
         }
 
@@ -67,8 +70,8 @@ namespace Kubeless.WebAPI.BackgroundServices
             var content = new StringContent(data, Encoding.UTF8);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json") {CharSet = "utf-8"};
 
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, FunctionUrl) {Content = content};
-            httpRequest.Headers.Add(BypassQueueHeader, "true");
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, _functionUrl) {Content = content};
+            httpRequest.Headers.Add(WorkerCallHeader, "true");
 
             var response = await HttpClient.SendAsync(httpRequest, stoppingToken);
             if (response.StatusCode != HttpStatusCode.OK)
@@ -85,7 +88,7 @@ namespace Kubeless.WebAPI.BackgroundServices
             {
                 _logger.LogInformation($"W.{id} started");
                 using var db = GetRedisDb();
-                var jobQueue = db.CreateList<string>(JobQueueName);
+                var jobQueue = db.CreateList<string>(_jobQueueName);
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
@@ -144,22 +147,23 @@ namespace Kubeless.WebAPI.BackgroundServices
 
         public async Task<bool> EnqueueIfParallelConstraint(HttpRequest request)
         {
-            if (_functionParallelismConstraint == 0)
+            if (_functionParallelismConstraint <= 0)
             {
                 // this function has no constraints on its parallelism
                 return false;
             }
 
-            if (request.Headers[BypassQueueHeader].Any())
+            if (request.Headers[WorkerCallHeader].Any())
             {
                 // this is a call from a background worker
                 return false;
             }
 
             // push data to redis
-            var data = await new StreamReader(request.Body, leaveOpen: true).ReadToEndAsync();
+            using var sr = new StreamReader(request.Body, leaveOpen: true);
+            var data = await sr.ReadToEndAsync();
             using var db = GetRedisDb();
-            var jobQueue = db.CreateList<string>(JobQueueName);
+            var jobQueue = db.CreateList<string>(_jobQueueName);
             await jobQueue.Push(data);
 
             return true;
