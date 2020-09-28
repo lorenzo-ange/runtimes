@@ -21,7 +21,7 @@ namespace Kubeless.WebAPI.Controllers
         private static readonly string[] MetricLabelNames =
             {"status", "handler", "function", "runtime", "event_namespace", "service_name"};
 
-        private static string[] MetricLabels(Context context, Event @event, string statusCode = "") => new[]{
+        private static string[] MetricLabels(Context context, Event @event, string statusCode = "UNKNOWN") => new[]{
             statusCode, context.ModuleName, context.FunctionName, context.Runtime, @event.EventNamespace, Environment.GetEnvironmentVariable("SERVICE_NAME")
         };
 
