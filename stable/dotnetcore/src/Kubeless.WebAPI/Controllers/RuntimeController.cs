@@ -26,14 +26,14 @@ namespace Kubeless.WebAPI.Controllers
         };
 
         private static readonly Counter CallsCountTotal = Metrics
-            .CreateCounter("kubeless_calls_total", "Number of calls processed.",
+            .CreateCounter("function_calls_total", "Number of calls processed.",
                 new CounterConfiguration
                 {
                     LabelNames = MetricLabelNames
                 });
 
         private static readonly Histogram DurationSeconds = Metrics
-            .CreateHistogram("kubeless_function_duration_seconds", "Duration of user function in seconds",
+            .CreateHistogram("function_duration_seconds", "Duration of user function in seconds",
                 new HistogramConfiguration
                 {
                     LabelNames = MetricLabelNames
