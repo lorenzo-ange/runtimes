@@ -21,24 +21,22 @@ namespace Kubeless.WebAPI.Controllers
         private static readonly string[] MetricLabelNames =
             {"status", "handler", "function", "runtime", "event_namespace", "service_name"};
 
-        private static string[] MetricLabels(Context context, Event @event, string statusCode = "UNKNOWN") => new[]{
-            statusCode, context.ModuleName, context.FunctionName, context.Runtime, @event.EventNamespace, Environment.GetEnvironmentVariable("SERVICE_NAME")
-        };
+        private static string[] MetricLabels(Context context, Event @event, string statusCode = "UNKNOWN_STATUS_CODE")
+        {
+            var serviceName = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SERVICE_NAME")) ? "UNKNOWN_SERVICE" : Environment.GetEnvironmentVariable("SERVICE_NAME");
+            var eventNamespace = string.IsNullOrEmpty(@event.EventNamespace) ? "UNKNOWN_EVENT_NAMESPACE" : @event.EventNamespace;
+            return new[] {
+                statusCode, context.ModuleName, context.FunctionName, context.Runtime, eventNamespace, serviceName
+            };
+        }
 
         private static readonly Counter CallsCountTotal = Metrics
             .CreateCounter("function_calls_total", "Number of calls processed.",
-                new CounterConfiguration
-                {
-                    LabelNames = MetricLabelNames
-                });
+                new CounterConfiguration { LabelNames = MetricLabelNames });
 
         private static readonly Histogram DurationSeconds = Metrics
             .CreateHistogram("function_duration_seconds", "Duration of user function in seconds",
-                new HistogramConfiguration
-                {
-                    LabelNames = MetricLabelNames
-                });
-
+                new HistogramConfiguration { LabelNames = MetricLabelNames });
         public RuntimeController(ILogger<RuntimeController> logger, IInvoker invoker, IParameterHandler parameterHandler)
         {
             _logger = logger;
