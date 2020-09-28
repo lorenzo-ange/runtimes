@@ -18,18 +18,25 @@ namespace Kubeless.WebAPI.Controllers
         private readonly IInvoker _invoker;
         private readonly IParameterHandler _parameterHandler;
 
+        private static readonly string[] MetricLabelNames =
+            {"status", "handler", "function", "runtime", "event_namespace", "service_name"};
+
+        private static string[] MetricLabels(Context context, Event @event, string statusCode = "") => new[]{
+            statusCode, context.ModuleName, context.FunctionName, context.Runtime, @event.EventNamespace, Environment.GetEnvironmentVariable("SERVICE_NAME")
+        };
+
         private static readonly Counter CallsCountTotal = Metrics
             .CreateCounter("kubeless_calls_total", "Number of calls processed.",
                 new CounterConfiguration
                 {
-                    LabelNames = new[] {"status", "handler", "function", "runtime"}
+                    LabelNames = MetricLabelNames
                 });
 
         private static readonly Histogram DurationSeconds = Metrics
             .CreateHistogram("kubeless_function_duration_seconds", "Duration of user function in seconds",
                 new HistogramConfiguration
                 {
-                    LabelNames = new[] {"handler", "function", "runtime"}
+                    LabelNames = MetricLabelNames
                 });
 
         public RuntimeController(ILogger<RuntimeController> logger, IInvoker invoker, IParameterHandler parameterHandler)
@@ -52,7 +59,7 @@ namespace Kubeless.WebAPI.Controllers
                 (@event, context) = await _parameterHandler.GetFunctionParameters(Request);
 
                 object output;
-                var durationMetrics = DurationSeconds.WithLabels(context.ModuleName, context.FunctionName, context.Runtime);
+                var durationMetrics = DurationSeconds.WithLabels(MetricLabels(context, @event));
                 using (durationMetrics.NewTimer()) {
                     output = await _invoker.Execute(@event, context);
                 }
@@ -60,26 +67,26 @@ namespace Kubeless.WebAPI.Controllers
 
                 _logger.LogInformation($"{DateTime.Now}: Function Executed. HTTP response: 200.");
 
-                LogMetrics(context, 200);
+                LogMetrics(context, @event, 200);
                 return output;
             }
             catch (OperationCanceledException exception)
             {
                 _logger.LogError(exception, $"{DateTime.Now}: Function Cancelled. HTTP Response: 408. Reason: Timeout.");
-                LogMetrics(context, 408);
+                LogMetrics(context, @event, 408);
                 return new StatusCodeResult(408);
             }
             catch (PhotosiMessaging.Exceptions.BaseException exception)
             {
                 _logger.LogCritical(exception, $"{DateTime.Now}: PhotosiMessaging Exception. HTTP Response: 550. Reason: {exception.Message}.");
-                LogMetrics(context, 550);
+                LogMetrics(context, @event, 550);
                 Response.StatusCode = 550;
                 return exception.PmsResponse;
             }
             catch (Exception exception)
             {
                 _logger.LogCritical(exception, $"{DateTime.Now}: Function Corrupted. HTTP Response: 500. Reason: {exception.Message}.");
-                LogMetrics(context, 500);
+                LogMetrics(context, @event, 500);
                 return new StatusCodeResult(500);
             }
         }
@@ -87,12 +94,12 @@ namespace Kubeless.WebAPI.Controllers
         [HttpGet("/healthz")]
         public IActionResult Health() => Ok();
 
-        private void LogMetrics(Context context, int statusCode)
+        private void LogMetrics(Context context, Event @event, int statusCode)
         {
             if (context != null)
             {
                 CallsCountTotal
-                    .WithLabels($"{statusCode}", context.ModuleName, context.FunctionName, context.Runtime)
+                    .WithLabels(MetricLabels(context, @event, $"{statusCode}"))
                     .Inc();
             }
         }
