@@ -5,13 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BeetleX.Redis" Version="0.9.7.9" />
     <PackageReference Include="Kubeless.DisposableExtensions" Version="0.0.3" />
     <PackageReference Include="OpenTracing" Version="0.12.1" />
     <PackageReference Include="Datadog.Trace.OpenTracing" Version="1.19.1" />
     <PackageReference Include="OpenTracing.Contrib.NetCore" Version="0.6.2" />
     <PackageReference Include="Sentry.AspNetCore" Version="2.1.3" />
-    <PackageReference Include="SlsParallelismConstraint" Version="0.0.1" />
     <ProjectReference Include="..\Kubeless.Core\Kubeless.Core.csproj" />
     <PackageReference Include="PhotosiMessaging.Exceptions" Version="0.0.3" />
     <PackageReference Include="prometheus-net.AspNetCore" Version="3.4.0" />

@@ -12,7 +12,7 @@ namespace Kubeless.Core.Invokers
     public class CompiledFunctionInvoker : IInvoker
     {
         public IFunction Function { get; }
-        public MethodInfo MethodInfo  { get; }
+        private readonly MethodInfo _methodInfo;
         private readonly dynamic _moduleInstance;
         private readonly int _functionTimeout;
 
@@ -28,7 +28,7 @@ namespace Kubeless.Core.Invokers
             var moduleType = functionAssembly.GetType(function.ModuleName);
             _moduleInstance = Activator.CreateInstance(moduleType);
 
-            MethodInfo = moduleType.GetMethod(function.FunctionHandler);
+            _methodInfo = moduleType.GetMethod(function.FunctionHandler);
         }
 
         private Assembly LoadAssembly(string path)
@@ -46,7 +46,7 @@ namespace Kubeless.Core.Invokers
 
         public async Task<object> Execute(Event kubelessEvent, Context kubelessContext)
         {
-            Task<object> resultTask = MethodInfo.Invoke(_moduleInstance, new object[] {kubelessEvent, kubelessContext});
+            Task<object> resultTask = _methodInfo.Invoke(_moduleInstance, new object[] {kubelessEvent, kubelessContext});
 
             var firstCompletedTask = await Task.WhenAny(resultTask, Task.Delay(_functionTimeout));
             if (firstCompletedTask == resultTask) {
