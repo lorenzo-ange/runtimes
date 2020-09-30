@@ -5,6 +5,7 @@ using Kubeless.DisposableExtensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Kubeless.Functions;
+using Kubeless.WebAPI.Utils;
 using Prometheus;
 using OpenTracing.Util;
 
@@ -76,7 +77,7 @@ namespace Kubeless.WebAPI.Controllers
             }
             catch (PhotosiMessaging.Exceptions.BaseException exception)
             {
-                _logger.LogCritical(exception, $"{DateTime.Now}: PhotosiMessaging Exception. HTTP Response: 550. Reason: {exception.Message}.");
+                _logger.LogPhotosiException(exception);
                 LogMetrics(context, @event, 550);
                 Response.StatusCode = 550;
                 return exception.PmsResponse;

@@ -33,17 +33,6 @@ namespace Kubeless.WebAPI
                             options.Debug = true;
                             options.MinimumEventLevel = LogLevel.Warning;
                             options.MaxRequestBodySize = RequestSize.Always;
-                            options.BeforeSend = @event =>
-                            {
-                                var ex = @event.Exception as BaseException;
-                                if (ex != null)
-                                {
-                                    @event.Level = (SentryLevel)ex.Level;
-                                }
-
-                                return @event;
-                            };
-
                         });
                     }
                     webBuilder.UseStartup<Startup>().UseUrls($"http://*:{port}");
