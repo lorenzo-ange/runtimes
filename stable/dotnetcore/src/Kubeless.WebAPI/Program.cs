@@ -3,7 +3,9 @@ using Kubeless.WebAPI.Utils;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using PhotosiMessaging.Exceptions;
 using Sentry.Extensibility;
+using Sentry.Protocol;
 
 namespace Kubeless.WebAPI
 {
@@ -29,7 +31,19 @@ namespace Kubeless.WebAPI
                     if (sentryEnabled) {
                         webBuilder.UseSentry(options => {
                             options.Debug = true;
+                            options.MinimumEventLevel = LogLevel.Warning;
                             options.MaxRequestBodySize = RequestSize.Always;
+                            options.BeforeSend = @event =>
+                            {
+                                var ex = @event.Exception as BaseException;
+                                if (ex != null)
+                                {
+                                    @event.Level = (SentryLevel)ex.Level;
+                                }
+
+                                return @event;
+                            };
+
                         });
                     }
                     webBuilder.UseStartup<Startup>().UseUrls($"http://*:{port}");
