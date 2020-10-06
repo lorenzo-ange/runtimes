@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Kubeless.WebAPI.BackgroundServices;
 
 namespace Kubeless.WebAPI
 {
@@ -45,6 +46,7 @@ namespace Kubeless.WebAPI
 
             services.AddTransient<IInvoker>(_ => new CompiledFunctionInvoker(function, timeout));
             services.AddSingleton<IParameterHandler>(new DefaultParameterHandler(Configuration));
+            services.AddHostedService<GcBackgroundService>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
