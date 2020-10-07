@@ -17,9 +17,9 @@ namespace Kubeless.WebAPI.BackgroundServices
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            Func<string, string> getEnv = Environment.GetEnvironmentVariable;
-            var gcCollectInterval = string.IsNullOrEmpty(getEnv("GC_COLLECT_INTERVAL")) ? int.Parse(getEnv("GC_COLLECT_INTERVAL")) : 5000;
-            var gcLohCompact = string.IsNullOrEmpty(getEnv("GC_LOH_COMPACT")) ? bool.Parse(getEnv("LOH_COMPACT")) : true;
+            Func<string, string> config = Environment.GetEnvironmentVariable;
+            var gcCollectInterval = string.IsNullOrEmpty(config("GC_COLLECT_INTERVAL")) ? 5000 : int.Parse(config("GC_COLLECT_INTERVAL"));
+            var gcLohCompact = string.IsNullOrEmpty(config("GC_LOH_COMPACT")) ? true : bool.Parse(config("LOH_COMPACT"));
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -27,9 +27,9 @@ namespace Kubeless.WebAPI.BackgroundServices
                 {
                     GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
                 }
-                _logger.LogInformation("GC collection started");
+                _logger.LogInformation($"{DateTime.Now}: GC collection started");
                 GC.Collect();
-                _logger.LogInformation("GC collection ended");
+                _logger.LogInformation($"{DateTime.Now}: GC collection ended");
                 await Task.Delay(gcCollectInterval, stoppingToken);
             }
         }
