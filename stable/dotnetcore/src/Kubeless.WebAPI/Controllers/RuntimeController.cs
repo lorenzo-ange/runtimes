@@ -59,10 +59,10 @@ namespace Kubeless.WebAPI.Controllers
 
                 object output;
                 var durationMetrics = DurationSeconds.WithLabels(MetricLabels(context, @event));
-                using (durationMetrics.NewTimer()) {
+                using (durationMetrics.NewTimer())
+                {
                     output = await _invoker.Execute(@event, context);
                 }
-                await @event.Extensions.DisposeAllAsync();
 
                 _logger.LogInformation($"{DateTime.Now}: Function Executed. HTTP response: 200.");
 
@@ -87,6 +87,13 @@ namespace Kubeless.WebAPI.Controllers
                 _logger.LogCritical(exception, $"{DateTime.Now}: Function Corrupted. HTTP Response: 500. Reason: {exception.Message}.");
                 LogMetrics(context, @event, 500);
                 return new StatusCodeResult(500);
+            }
+            finally
+            {
+                if (@event != null)
+                {
+                    await @event.Extensions.DisposeAllAsync();
+                }
             }
         }
 
